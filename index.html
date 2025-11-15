@@ -4,138 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Expense Tracker (LocalStorage) — Resume Project</title>
-  <style>
-    /* Stronger palette, reduced whiteness in light mode, improved toggle & scrollbar */
-    :root{
-  --bg:#f3efe8; /* slightly less white */
-  --card:#ffffff;
-  --accent:#948979;
-  --accent-2:#6d6356;
-  --text-strong:#1f1f1f;
-  --muted:#4b4b4b;
-  --muted-2:#6b6b6b;
-  --glass: rgba(0,0,0,0.04);
-  --glass-2: rgba(148,137,121,0.12);
-  --shadow: 0 10px 30px rgba(0,0,0,0.08);
-  --success:#3c8f5c;
-  --danger:#d14f4f;
-  --pill-bg: rgba(148,137,121,0.18);
-}
-    [data-theme='dark']{
-  --bg:#222831;
-  --card:#393E46;
-  --accent:#DFD0B8;
-  --accent-2:#948979;
-  --text-strong:#ffffff;
-  --muted:#d1d5db;
-  --muted-2:#bfc5ce;
-  --glass: rgba(255,255,255,0.06);
-  --glass-2: rgba(223,208,184,0.10);
-  --shadow:0 12px 34px rgba(0,0,0,0.5);
-  --success:#9acd97;
-  --danger:#ff7d7d;
-  --pill-bg: rgba(223,208,184,0.15);
-}
-
-    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--muted);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:28px;transition:background .25s,color .25s}
-    .app{width:1100px;max-width:100%;display:flex;flex-direction:column;gap:20px}
-
-    /* custom scrollbar: translucent track + contrasting thumb so text below remains readable */
-    ::-webkit-scrollbar{width:12px;height:12px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--accent),var(--accent-2));border-radius:8px;border:3px solid rgba(0,0,0,0.06);box-shadow:inset 0 0 0 2px rgba(255,255,255,0.06)}
-    /* Firefox */
-    *{scrollbar-width:thin;scrollbar-color: linear-gradient(180deg,var(--accent),var(--accent-2)) transparent}
-
-    /* Cards & common */
-    .card{background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,0.04);transition:transform .28s,box-shadow .28s}
-    .card.fade-up{animation:slideUp .36s both}
-    @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-
-    h1,h2,h3{margin:0;color:var(--text-strong);font-weight:700}
-    h4{margin:6px 0;color:var(--text-strong);font-weight:700}
-    form .row{display:flex;gap:10px}
-    label{display:block;font-size:12px;color:var(--muted-2);margin-bottom:6px}
-    input,select,button{font-family:inherit}
-    input,select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;color:var(--text-strong)}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
-    .muted{color:var(--muted);font-size:13px}
-
-    /* Quick stats */
-    .stats{display:flex;gap:10px;margin-top:12px}
-    .stat{flex:1;background:var(--glass);padding:12px;border-radius:10px;text-align:center}
-    .stat .n{font-weight:800;font-size:18px;color:var(--text-strong)}
-    .controls{display:flex;gap:10px;margin-top:12px;align-items:center}
-
-    /* Main layout */
-    .main{display:flex;flex-direction:column;gap:16px}
-    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .filters{display:flex;gap:8px}
-    .table{background:transparent;border-radius:10px;padding:12px;overflow:auto;padding-right:18px} /* added right padding so text doesn't hide under scrollbar */
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 8px;text-align:left;border-bottom:1px dashed rgba(0,0,0,0.06);color:var(--text-strong)}
-    tr:last-child td{border-bottom:0}
-    tr:hover{background:rgba(3,102,214,0.03)}
-
-    /* Pills - smaller so breakdown looks compact */
-    .category-pill{padding:4px 6px;border-radius:999px;font-size:11px;background:var(--pill-bg);display:inline-block;cursor:pointer;color:var(--text-strong);font-weight:600}
-    .actions button{margin-right:6px}
-
-    /* Chart area - stack legend under main chart */
-    .summary{display:flex;flex-direction:column;gap:12px}
-    .chart{flex:1;min-height:220px;background:var(--card);padding:12px;border-radius:10px}
-    .legend{width:100%;background:var(--card);padding:12px;border-radius:10px}
-    .empty{opacity:0.8;padding:18px;text-align:center}
-
-    /* Category breakdown compact scrollable section with clear headings */
-    #category-breakdown{display:flex;flex-direction:column;gap:8px;max-height:160px;overflow:auto;padding-right:6px}
-    /* category-specific scrollbar so text remains readable */
-    #category-breakdown::-webkit-scrollbar{width:10px}
-    #category-breakdown::-webkit-scrollbar-track{background:rgba(0,0,0,0.04);border-radius:6px}
-    #category-breakdown::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--accent),var(--accent-2));border-radius:6px;border:2px solid rgba(255,255,255,0.02)}
-    /* dark mode variations for the category scrollbar */
-    [data-theme='dark'] #category-breakdown::-webkit-scrollbar-track{background:rgba(255,255,255,0.03)}
-    [data-theme='dark'] #category-breakdown::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--accent-2),var(--accent));border:2px solid rgba(0,0,0,0.12)}
-    /* Firefox fallback */
-    #category-breakdown{scrollbar-width:thin;scrollbar-color: linear-gradient(180deg,var(--accent),var(--accent-2)) rgba(0,0,0,0.04)}
-
-    /* small pie-preview styling: compact, rounded, and adapts to dark mode */
-    #pie-preview{width:180px;margin:0 0 10px 0;border-radius:12px;background:var(--card);padding:10px;box-shadow:var(--shadow);display:block;float:none}
-    [data-theme='dark'] #pie-preview{background:rgba(255,255,255,0.02);}
-    
-    #category-breakdown .cat-row{display:flex;justify-content:space-between;align-items:center;padding:6px;border-radius:8px}
-    #category-breakdown .cat-row strong{font-size:13px}
-
-    /* Canvas sizing */
-    canvas{display:block;width:100%;height:auto;background:transparent}
-    #monthChart{height:240px}
-    #weekChart{height:140px}
-
-    /* Toggle: make more visible in light mode */
-    .toggle{width:46px;height:26px;border-radius:20px;padding:3px;background:rgba(15,23,42,0.06);display:inline-flex;align-items:center;gap:3px;cursor:pointer;border:1px solid rgba(15,23,42,0.08)}
-    .toggle .knob{width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 4px 10px rgba(2,6,23,0.08);transition:transform .2s;border:1px solid rgba(15,23,42,0.06)}
-    .toggle[data-on='true']{background:linear-gradient(90deg,var(--accent-2),var(--accent))}
-    .toggle[data-on='false']{background:rgba(15,23,42,0.06)}
-    .toggle[data-on='true'] .knob{transform:translateX(20px);background:#fff}
-    .toggle[data-on='false'] .knob{transform:translateX(0);background:#fff}
-
-    /* Toasts */
-    .toasts{position:fixed;right:20px;top:20px;display:flex;flex-direction:column;gap:10px;z-index:9999}
-    .toast{min-width:220px;padding:10px 12px;border-radius:10px;color:#fff;box-shadow:0 8px 20px rgba(2,6,23,0.2);opacity:0;transform:translateY(-8px);animation:toastIn .28s forwards}
-    .toast.success{background:linear-gradient(90deg,var(--success),#059669)}
-    .toast.error{background:linear-gradient(90deg,var(--danger),#f97316)}
-    @keyframes toastIn{to{opacity:1;transform:none}}
-
-    /* Progress / budget */
-    .progress{height:12px;background:rgba(0,0,0,0.04);border-radius:12px;overflow:hidden}
-    .progress > div{height:100%;border-radius:12px;transition:width .45s}
-
-    /* responsive */
-    @media (max-width:980px){.app{grid-template-columns:1fr;} .legend{width:100%} .summary{flex-direction:column} #category-breakdown{max-height:220px}}
-
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
@@ -147,7 +16,9 @@
       <h1 style="margin:0;color:var(--text-strong);font-size:20px">Expense Tracker</h1>
       <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
         <div style="font-size:13px;color:var(--muted)">Theme</div>
-        <div id="theme-toggle" class="toggle" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div>
+        <div id="theme-toggle" class="toggle" role="switch" aria-checked="false" tabindex="0">
+          <div class="knob"></div>
+        </div>
       </div>
     </div>
 
@@ -255,7 +126,13 @@
       <div class="card table fade-up">
         <table>
           <thead>
-            <tr><th>Title</th><th>Category</th><th>Date</th><th>Amount (₹)</th><th>Actions</th></tr>
+            <tr>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Date</th>
+              <th>Amount (₹)</th>
+              <th>Actions</th>
+            </tr>
           </thead>
           <tbody id="expenses-list">
             <!-- items -->
@@ -267,7 +144,9 @@
         <div class="chart card fade-up" aria-hidden="false">
           <h3 style="margin:0 0 8px 0">Monthly Summary (by month)</h3>
           <canvas id="monthChart" role="img" aria-label="Monthly expenses chart"></canvas>
-          <div class="muted" style="margin-top:8px;font-size:13px">Bars show total expense per month. Hover to see value.</div>
+          <div class="muted" style="margin-top:8px;font-size:13px">
+            Bars show total expense per month. Hover to see value.
+          </div>
 
           <!-- legend will be injected here -->
           <div id="month-legend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px"></div>
@@ -285,9 +164,17 @@
 
           <hr />
           <div style="margin-top:8px;">
-            <div style="display:flex;justify-content:space-between;align-items:center"><div class="muted">Budget usage</div><div id="budget-label" class="muted">₹0 / ₹0</div></div>
-            <div class="progress" style="margin-top:8px"><div id="budget-bar" style="width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div></div>
-            <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px"><div class="muted">Savings</div><div id="savings" style="font-weight:700;margin-top:6px;color:var(--text-strong)">₹0.00</div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="muted">Budget usage</div>
+              <div id="budget-label" class="muted">₹0 / ₹0</div>
+            </div>
+            <div class="progress" style="margin-top:8px">
+              <div id="budget-bar" style="width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div>
+            </div>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+              <div class="muted">Savings</div>
+              <div id="savings" style="font-weight:700;margin-top:6px;color:var(--text-strong)">₹0.00</div>
+            </div>
           </div>
 
           <div style="margin-top:12px;">Tip: Click a category pill above to filter.</div>
@@ -297,307 +184,6 @@
     </div>
   </div>
 
-  <script>
-    // Enhanced expense tracker using LocalStorage with improved visuals, animations and accessibility
-    const STORAGE_KEY = 'pratham_expenses_v1';
-    const PREFS_KEY = 'pratham_expenses_prefs_v1';
-
-    // DOM
-    const form = document.getElementById('expense-form');
-    const titleInp = document.getElementById('title');
-    const amountInp = document.getElementById('amount');
-    const categoryInp = document.getElementById('category');
-    const dateInp = document.getElementById('date');
-    const saveBtn = document.getElementById('save-btn');
-    const resetBtn = document.getElementById('reset-btn');
-
-    const filterCategory = document.getElementById('filter-category');
-    const filterMonth = document.getElementById('filter-month');
-    const expensesList = document.getElementById('expenses-list');
-    const totalAmount = document.getElementById('total-amount');
-    const monthAmount = document.getElementById('month-amount');
-    const countEl = document.getElementById('count');
-    const searchInp = document.getElementById('search');
-    const exportBtn = document.getElementById('export-json');
-    const clearStorageBtn = document.getElementById('clear-storage');
-    const categoryBreakdown = document.getElementById('category-breakdown');
-    const monthChartCanvas = document.getElementById('monthChart');
-    const weekChartCanvas = document.getElementById('weekChart');
-    const monthLegend = document.getElementById('month-legend');
-
-    // contexts
-    const ctx = monthChartCanvas.getContext('2d');
-    const wctx = weekChartCanvas.getContext('2d');
-
-    const importBtn = document.getElementById('import-btn');
-    const importFile = document.getElementById('import-file');
-    const budgetInput = document.getElementById('budget-input');
-    const incomeInput = document.getElementById('income-input');
-    const savePrefsBtn = document.getElementById('save-prefs');
-    const budgetBar = document.getElementById('budget-bar');
-    const budgetLabel = document.getElementById('budget-label');
-    const savingsEl = document.getElementById('savings');
-    const themeToggle = document.getElementById('theme-toggle');
-
-    let expenses = []; // array of {id,title,amount,category,date}
-    let editId = null;
-    let prefs = {budget:0,income:0,theme:'auto'};
-
-    // Utilities
-    const uid = ()=> '_' + Math.random().toString(36).substr(2,9);
-    const formatCurrency = v => '₹' + Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    const CHART_COLORS = ['#06b6d4','#0ea5b4','#60a5fa','#2563eb','#f59e0b','#ef4444','#8b5cf6'];
-
-    // Toasts
-    function showToast(type, text, ms=2600){
-      const container = document.getElementById('toasts');
-      const div = document.createElement('div'); div.className = 'toast ' + (type||'success'); div.textContent = text; container.appendChild(div);
-      setTimeout(()=>{ div.style.transition='opacity .3s, transform .3s'; div.style.opacity='0'; div.style.transform='translateY(-8px)'; setTimeout(()=>div.remove(),300); }, ms);
-    }
-
-    // Load / Save
-    function load(){
-      try{ const raw = localStorage.getItem(STORAGE_KEY); expenses = raw ? JSON.parse(raw) : []; }catch(e){expenses=[]}
-      try{ const p = localStorage.getItem(PREFS_KEY); if(p) prefs = Object.assign(prefs, JSON.parse(p)); }catch(e){}
-      applyPrefsToUI();
-    }
-    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses)); }
-    function savePrefs(){ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
-
-    function applyPrefsToUI(){
-      budgetInput.value = prefs.budget || '';
-      incomeInput.value = prefs.income || '';
-      const theme = prefs.theme || 'auto';
-      const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const useDark = theme==='dark' || (theme==='auto' && systemDark);
-      document.documentElement.setAttribute('data-theme', useDark ? 'dark' : 'light');
-      themeToggle.setAttribute('data-on', useDark);
-      themeToggle.setAttribute('aria-checked', useDark);
-    }
-
-    // Render list
-    function renderList(){
-      const q = (searchInp.value||'').toLowerCase();
-      const catFilter = filterCategory.value;
-      const monthFilter = filterMonth.value; // yyyy-mm
-
-      let rows = expenses.slice().filter(e=>{
-        if(catFilter!=='all' && e.category!==catFilter) return false;
-        if(monthFilter){ const y = e.date.slice(0,7); if(y!==monthFilter) return false; }
-        if(q){ return e.title.toLowerCase().includes(q) || String(e.amount).includes(q) || e.category.toLowerCase().includes(q); }
-        return true;
-      });
-
-      expensesList.innerHTML='';
-      if(rows.length===0){ expensesList.innerHTML = '<tr><td colspan="5" class="empty">No expenses found.</td></tr>'; return; }
-
-      rows.sort((a,b)=> new Date(b.date) - new Date(a.date));
-
-      for(const e of rows){
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong style="color:var(--text-strong)">${escapeHtml(e.title)}</strong><div class="muted" style="font-size:12px">#${e.id}</div></td>
-          <td><span class="category-pill">${escapeHtml(e.category)}</span></td>
-          <td>${escapeHtml(e.date)}</td>
-          <td>${formatCurrency(e.amount)}</td>
-          <td class="actions">
-            <button data-id="${e.id}" class="edit">Edit</button>
-            <button data-id="${e.id}" class="delete">Delete</button>
-          </td>
-        `;
-        expensesList.appendChild(tr);
-      }
-
-      // attach handlers
-      document.querySelectorAll('.edit').forEach(b=>b.addEventListener('click', (ev)=>{ const id = ev.target.dataset.id; startEdit(id); }));
-      document.querySelectorAll('.delete').forEach(b=>b.addEventListener('click', (ev)=>{ const id = ev.target.dataset.id; removeExpense(id); }));
-    }
-
-    // Escape helper
-    function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-    // Stats
-    function computeStats(){
-      const total = expenses.reduce((sum,e)=>sum + Number(e.amount),0);
-      totalAmount.textContent = formatCurrency(total);
-      countEl.textContent = expenses.length;
-
-      const now = new Date(); const ym = now.toISOString().slice(0,7);
-      const thisMonthTotal = expenses.filter(e=>e.date.slice(0,7)===ym).reduce((s,e)=>s+Number(e.amount),0);
-      monthAmount.textContent = formatCurrency(thisMonthTotal);
-
-      // category breakdown
-      const cats = {};
-      for(const e of expenses){ cats[e.category] = (cats[e.category]||0) + Number(e.amount); }
-      categoryBreakdown.innerHTML='';
-      const keys = Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
-      if(keys.length===0){ categoryBreakdown.innerHTML = '<div class="empty">No data — add some expenses.</div>'; }
-
-      // build compact rows and group top 5 as primary
-      const totalVal = total || 1;
-      const top = keys.slice(0,5);
-      const rest = keys.slice(5);
-      top.forEach(k=>{
-        const row = document.createElement('div'); row.className='cat-row';
-        row.innerHTML = `<div><span class="category-pill" style="cursor:pointer" data-cat="${k}">${k}</span> <span class="muted" style="margin-left:8px">${(cats[k]/totalVal*100).toFixed(1)}%</span></div><div><strong style="color:var(--text-strong)">${formatCurrency(cats[k])}</strong></div>`;
-        categoryBreakdown.appendChild(row);
-      });
-      if(rest.length){
-        const otherRow = document.createElement('div'); otherRow.className='cat-row';
-        const otherTotal = rest.reduce((s,kk)=>s+cats[kk],0);
-        otherRow.innerHTML = `<div><span class="category-pill" style="cursor:pointer" data-cat="Other">Other</span> <span class="muted" style="margin-left:8px">${(otherTotal/totalVal*100).toFixed(1)}%</span></div><div><strong style="color:var(--text-strong)">${formatCurrency(otherTotal)}</strong></div>`;
-        categoryBreakdown.appendChild(otherRow);
-      }
-
-      // make category pills clickable
-      document.querySelectorAll('.category-pill[data-cat], #category-breakdown .category-pill').forEach(el=>el.addEventListener('click', ev=>{ const cat = ev.currentTarget.dataset.cat || ev.currentTarget.textContent; filterCategory.value = cat; renderAll(); }));
-
-      updateBudgetAndSavings(total);
-      drawMonthChartAnimated();
-      drawWeekChart();
-      drawPieChart(cats, total);
-    }
-
-    function updateBudgetAndSavings(totalExpenses){
-      const budget = Number(prefs.budget) || 0; const income = Number(prefs.income) || 0;
-      const used = totalExpenses;
-      const pct = budget>0 ? Math.min(100, Math.round((used/budget)*100)) : 0;
-      budgetBar.style.width = pct + '%';
-      budgetLabel.textContent = `${formatCurrency(used)} / ${formatCurrency(budget)}`;
-      const savings = income - used;
-      savingsEl.textContent = formatCurrency(savings);
-
-      // color hints
-      if(budget>0){ if(pct>=100) budgetBar.style.background = 'linear-gradient(90deg,var(--danger),#f97316)'; else if(pct>=80) budgetBar.style.background = 'linear-gradient(90deg,#f59e0b,#f97316)'; else budgetBar.style.background = 'linear-gradient(90deg,var(--accent),var(--accent-2))'; }
-    }
-
-    // Chart helpers
-    function getMonthlyTotals(){
-      const map = {};
-      for(const e of expenses){ const ym = e.date.slice(0,7); map[ym] = (map[ym]||0) + Number(e.amount); }
-      const months = []; const now = new Date();
-      for(let i=11;i>=0;i--){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1); const key = d.toISOString().slice(0,7); months.push(key); }
-      const values = months.map(m=> map[m] || 0); return {months, values};
-    }
-
-    // Resize canvases to device pixel ratio and set label color
-    function fixCanvas(){
-      const ratio = window.devicePixelRatio || 1;
-      // month
-      monthChartCanvas.width = Math.floor(monthChartCanvas.clientWidth * ratio);
-      monthChartCanvas.height = Math.floor(monthChartCanvas.clientHeight * ratio);
-      ctx.setTransform(ratio,0,0,ratio,0,0);
-      ctx.textBaseline = 'top'; ctx.lineJoin = 'round';
-      // week
-      weekChartCanvas.width = Math.floor(weekChartCanvas.clientWidth * ratio);
-      weekChartCanvas.height = Math.floor(weekChartCanvas.clientHeight * ratio);
-      wctx.setTransform(ratio,0,0,ratio,0,0);
-      wctx.textBaseline = 'top'; wctx.lineJoin = 'round';
-    }
-
-    // Draw month chart with a progress factor (0..1) for animation
-    function drawMonthChartProgress(progress){
-      const {months, values} = getMonthlyTotals();
-      ctx.clearRect(0,0, monthChartCanvas.width, monthChartCanvas.height);
-      const W = monthChartCanvas.width; const H = monthChartCanvas.height; const padding = 30; const maxV = Math.max(1, ...values);
-      const barW = (W - padding*2) / values.length * 0.65; const gap = ((W - padding*2) / values.length) - barW;
-      const LABEL = getComputedStyle(document.documentElement).getPropertyValue('--text-strong') || '#0f172a';
-      ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, H-padding); ctx.lineTo(W-padding, H-padding); ctx.stroke();
-      for(let i=0;i<values.length;i++){
-        const v = values[i] * progress; // animated value
-        const x = padding + i*((W - padding*2)/values.length) + gap/2;
-        const height = (v/maxV) * (H - padding*2);
-        const y = H - padding - height;
-        // gradient
-        const g = ctx.createLinearGradient(x, y, x, H-padding);
-        g.addColorStop(0, CHART_COLORS[i%CHART_COLORS.length]); g.addColorStop(1, 'rgba(6,182,212,0.18)');
-        ctx.fillStyle = g;
-        roundRect(ctx, x, y, barW, height, 6, true, false);
-        // month label
-        ctx.fillStyle = LABEL; ctx.font = '12px Inter, system-ui'; const label = months[i].slice(5);
-        ctx.fillText(label, x, H - padding + 16);
-      }
-    }
-
-    // Animate bars from 0 to 1
-    function drawMonthChartAnimated(){
-      fixCanvas();
-      const frames = 24; let f = 0;
-      function step(){ f++; const p = Math.min(1, f/frames); drawMonthChartProgress(p); if(f<frames) requestAnimationFrame(step); else { buildMonthLegend(); } }
-      step();
-    }
-
-    function buildMonthLegend(){
-      // small legend showing colors used
-      monthLegend.innerHTML = '';
-      const cats = Object.keys(getCategoryTotals()).slice(0,6);
-      for(let i=0;i<cats.length;i++){
-        const box = document.createElement('div'); box.style.display='inline-flex'; box.style.alignItems='center'; box.style.gap='8px';
-        const colorSquare = document.createElement('span'); colorSquare.style.width='12px'; colorSquare.style.height='12px'; colorSquare.style.display='inline-block'; colorSquare.style.borderRadius='3px'; colorSquare.style.background = CHART_COLORS[i%CHART_COLORS.length];
-        const label = document.createElement('span'); label.style.fontSize='12px'; label.style.color='var(--muted)'; label.textContent = cats[i];
-        box.appendChild(colorSquare); box.appendChild(label); monthLegend.appendChild(box);
-      }
-    }
-
-    function getCategoryTotals(){ const cats = {}; for(const e of expenses){ cats[e.category] = (cats[e.category]||0) + Number(e.amount); } return cats; }
-
-    function drawWeekChart(){ fixCanvas(); const {keys, values} = getWeeklyTotals(); wctx.clearRect(0,0, weekChartCanvas.width, weekChartCanvas.height); const W = weekChartCanvas.width; const H = weekChartCanvas.height; const padding = 24; const maxV = Math.max(1, ...values); const stepX = (W-padding*2)/(values.length-1 || 1);
-      const LABEL = getComputedStyle(document.documentElement).getPropertyValue('--text-strong') || '#0f172a';
-      // draw line
-      wctx.beginPath(); for(let i=0;i<values.length;i++){ const x = padding + i*stepX; const y = H - padding - (values[i]/maxV)*(H-padding*2); if(i===0) wctx.moveTo(x,y); else wctx.lineTo(x,y);} wctx.strokeStyle=CHART_COLORS[2]; wctx.lineWidth=2; wctx.stroke(); // fill area
-      wctx.beginPath(); for(let i=0;i<values.length;i++){ const x = padding + i*stepX; const y = H - padding - (values[i]/maxV)*(H-padding*2); if(i===0) wctx.moveTo(x,y); else wctx.lineTo(x,y); } wctx.lineTo(W-padding, H-padding); wctx.lineTo(padding, H-padding); wctx.closePath(); const g = wctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'rgba(96,165,250,0.25)'); g.addColorStop(1,'rgba(96,165,250,0.02)'); wctx.fillStyle = g; wctx.fill(); // labels
-      wctx.fillStyle=LABEL; wctx.font='11px Inter, system-ui'; for(let i=0;i<keys.length;i++){ const x = padding + i*stepX; wctx.fillText(keys[i].slice(5), x-10, H-padding+14);} }
-
-    // Weekly trend (last 7 days)
-    function getWeeklyTotals(){ const map = {}; const today = new Date(); for(let i=6;i>=0;i--){ const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i); const key = d.toISOString().slice(0,10); map[key]=0; } for(const e of expenses){ if(map[e.date]!==undefined) map[e.date]+=Number(e.amount); } const keys = Object.keys(map); const values = keys.map(k=>map[k]); return {keys, values}; }
-
-    // Pie chart (category distribution) - create small preview
-    function drawPieChart(cats, total){ const canvas = document.createElement('canvas'); /* smaller preview for category panel */ canvas.width=180; canvas.height=120; const c = canvas.getContext('2d'); let start=0; const keys = Object.keys(cats); const centerX = 90, centerY = 60, radius = 48; for(let i=0;i<keys.length;i++){ const k=keys[i]; const v = cats[k]; const slice = v/Math.max(1,total); c.beginPath(); c.moveTo(centerX,centerY); c.arc(centerX,centerY,radius,start,start+slice*Math.PI*2); c.closePath(); c.fillStyle = CHART_COLORS[i%CHART_COLORS.length]; c.fill(); start += slice*Math.PI*2; }
-      const legend = document.getElementById('category-breakdown'); if(canvas && legend){ let img = document.getElementById('pie-preview'); if(!img){ img = document.createElement('img'); img.id='pie-preview'; img.style.width='160px'; img.style.marginBottom='8px'; legend.insertBefore(img, legend.firstChild); }
-        img.src = canvas.toDataURL(); }
-    }
-
-    // draw rounded rect helper
-    function roundRect(ctx, x, y, w, h, r, fill, stroke){ if (w < 2 * r) r = w / 2; if (h < 2 * r) r = h / 2; ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); if(fill) ctx.fill(); if(stroke) ctx.stroke(); }
-
-    // CRUD
-    function addExpense(obj){ expenses.push(obj); save(); renderAll(); showToast('success','Expense Added!'); }
-    function updateExpense(id, data){ const idx = expenses.findIndex(e=>e.id===id); if(idx===-1) return false; expenses[idx]=Object.assign({}, expenses[idx], data); save(); renderAll(); return true; }
-    function removeExpense(id){ if(!confirm('Delete this expense?')) return; expenses = expenses.filter(e=>e.id!==id); save(); renderAll(); showToast('success','Deleted!'); }
-
-    function startEdit(id){ const e = expenses.find(x=>x.id===id); if(!e) return; editId = id; titleInp.value = e.title; amountInp.value = e.amount; categoryInp.value = e.category; dateInp.value = e.date; saveBtn.textContent = 'Update Expense'; }
-
-    // handlers
-    form.addEventListener('submit', function(ev){ ev.preventDefault(); const title = titleInp.value.trim(); const amount = parseFloat(amountInp.value); const category = categoryInp.value; const date = dateInp.value; if(!title || !date || isNaN(amount)) { showToast('error','Please fill valid values'); return; } if(editId){ updateExpense(editId, {title, amount, category, date}); editId=null; saveBtn.textContent='Add Expense'; form.reset(); showToast('success','Updated Successfully!'); } else { const item = { id: uid(), title, amount: Number(amount), category, date }; addExpense(item); form.reset(); } });
-
-    resetBtn.addEventListener('click', ()=>{ editId=null; saveBtn.textContent='Add Expense'; form.reset(); });
-    filterCategory.addEventListener('change', renderAll);
-    filterMonth.addEventListener('change', renderAll);
-    searchInp.addEventListener('input', renderAll);
-    clearStorageBtn.addEventListener('click', ()=>{ if(confirm('Clear all saved expenses?')){ expenses=[]; save(); renderAll(); showToast('success','All data cleared'); } });
-
-    exportBtn.addEventListener('click', ()=>{ const data = JSON.stringify(expenses, null, 2); const blob = new Blob([data], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'expenses.json'; a.click(); URL.revokeObjectURL(url); showToast('success','Backup downloaded'); });
-
-    importBtn.addEventListener('click', ()=>importFile.click());
-    importFile.addEventListener('change', (ev)=>{ const f = ev.target.files[0]; if(!f) return; const reader = new FileReader(); reader.onload = function(){ try{ const parsed = JSON.parse(reader.result); if(!Array.isArray(parsed)) throw new Error('Invalid file'); expenses = parsed; save(); renderAll(); showToast('success','Backup restored'); }catch(e){ showToast('error','Invalid backup file'); } }; reader.readAsText(f); importFile.value=''; });
-
-    savePrefsBtn.addEventListener('click', ()=>{ prefs.budget = Number(budgetInput.value)||0; prefs.income = Number(incomeInput.value)||0; savePrefs(); renderAll(); showToast('success','Preferences saved'); });
-
-    // theme toggle
-    themeToggle.addEventListener('click', ()=>{ const current = themeToggle.getAttribute('data-on') === 'true'; const next = !current; themeToggle.setAttribute('data-on', next); themeToggle.setAttribute('aria-checked', next); prefs.theme = next ? 'dark' : 'light'; savePrefs(); applyPrefsToUI(); showToast('success', next ? 'Dark theme' : 'Light theme'); });
-
-    // render all
-    function renderAll(){ renderList(); computeStats(); }
-
-    // initialize default date to today
-    dateInp.value = new Date().toISOString().slice(0,10);
-
-    // initial load
-    load(); renderAll();
-
-    // small note: resize canvases to device pixel ratio
-    window.addEventListener('resize', ()=>{ fixCanvas(); drawMonthChartAnimated(); drawWeekChart(); }); setTimeout(()=>{ fixCanvas(); drawMonthChartAnimated(); drawWeekChart(); },120);
-
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
